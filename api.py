@@ -1,4 +1,5 @@
-# coding=utf-8
+#!/usr/bin/env
+# -*- coding: utf-8 -*-
 """REST API"""
 
 from flask import Flask
