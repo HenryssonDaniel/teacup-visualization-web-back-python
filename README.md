@@ -1,4 +1,4 @@
-# teacup-service-visualization-mysql-java
+# teacup-visualization-web-back-python
 **Te**sting Fr**a**mework for **C**omm**u**nication **P**rotocols and Web Services with visualization web back-end in Python
 
 [![Build Status](https://travis-ci.com/HenryssonDaniel/teacup-visualization-web-back-python.svg?branch=master)](https://travis-ci.com/HenryssonDaniel/teacup-visualization-web-back-python)
