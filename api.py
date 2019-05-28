@@ -6,6 +6,7 @@ from flask import Flask
 from flask import json
 from flask import jsonify
 from flask import request
+import requests
 from flask import Response
 
 app = Flask(__name__)
@@ -16,12 +17,8 @@ app = Flask(__name__)
 @app.route('/api/v1.0/account/logIn', methods=['POST'])
 def log_in() -> Response:
     """Log in"""
-    data = json.loads(request.data)
-
-    email = data['email']
-    password = data['password']
-
-    if email == 'admin@teacup.com' and password == 'password':
+    if requests.post('http://localhost:8080/mysql/api/account/logIn', data=json.dumps(json.loads(request.data)),
+                         headers={'content-type': 'application/json'}).status_code == 200:
         response = jsonify({'some': 'data'})
     else:
         response = Response(status=401)
@@ -36,6 +33,14 @@ def log_in() -> Response:
 @app.route('/api/v1.0/account/recover', methods=['POST'])
 def recover() -> Response:
     """Recover account"""
+    if requests.post('http://localhost:8080/mysql/api/account/recover', data=json.dumps(json.loads(request.data)),
+                         headers={'content-type': 'application/json'}).status_code == 200:
+        response = jsonify({'some': 'data'})
+    else:
+        response = Response(status=401)
+
+    response.headers.add('Access-Control-Allow-Origin', '*')
+
     return Response()
 
 
