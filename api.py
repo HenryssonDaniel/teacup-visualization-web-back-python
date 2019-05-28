@@ -41,15 +41,23 @@ def recover() -> Response:
 
     response.headers.add('Access-Control-Allow-Origin', '*')
 
-    return Response()
+    return response
 
 
-@app.route('/api/account/signUp')
-@app.route('/api/v1/account/signUp')
-@app.route('/api/v1.0/account/signUp')
+@app.route('/api/account/signUp', methods=['POST'])
+@app.route('/api/v1/account/signUp', methods=['POST'])
+@app.route('/api/v1.0/account/signUp', methods=['POST'])
 def sign_up() -> Response:
     """Sign up"""
-    return Response()
+    if requests.post('http://localhost:8080/mysql/api/account/signUp', data=json.dumps(json.loads(request.data)),
+                         headers={'content-type': 'application/json'}).status_code == 200:
+        response = jsonify({'some': 'data'})
+    else:
+        response = Response(status=401)
+
+    response.headers.add('Access-Control-Allow-Origin', '*')
+
+    return response
 
 
 if __name__ == '__main__':
