@@ -20,21 +20,60 @@ cors = CORS(app)
 Session(app)
 
 
+@app.route('/api/dashboard', methods=['GET'])
+@app.route('/api/v1/dashboard', methods=['GET'])
+@app.route('/api/v1.0/dashboard', methods=['GET'])
+def dashboard() -> Response:
+    """Dashboard"""
+    if 'id' in session:
+        response = requests.get('http://localhost:8080/mysql/api/dashboard', data='{"id":"' + session["id"] + '"}',
+                                headers={'content-type': 'application/json'})
+
+        response = jsonify({'firstName': session["firstName"], "lastName": session["lastName"]})
+    else:
+        response = Response(status=401)
+
+    response.headers.add('Access-Control-Allow-credentials', 'true')
+
+    return response
+
+
 @app.route('/api/account/logIn', methods=['POST'])
 @app.route('/api/v1/account/logIn', methods=['POST'])
 @app.route('/api/v1.0/account/logIn', methods=['POST'])
 def log_in() -> Response:
     """Log in"""
-    if 'logged_in' not in session:
-        if requests.post('http://localhost:8080/mysql/api/account/logIn', data=json.dumps(json.loads(request.data)),
-                         headers={'content-type': 'application/json'}).status_code == 200:
-            response = jsonify({'some': 'data'})
-            session['logged_in'] = True
-        else:
-            response = Response(status=401)
-    else:
-        response = Response(status=406)
+    response = requests.post('http://localhost:8080/mysql/api/account/logIn',
+                             data=json.dumps(json.loads(request.data)),
+                             headers={'content-type': 'application/json'})
 
+    status = response.status_code
+    if status == 200:
+        content = response.json()
+
+        session['email'] = content["email"]
+        session['firstName'] = content["firstName"]
+        session['id'] = content["id"]
+        session['lastName'] = content["lastName"]
+
+        response = Response()
+    else:
+        response = Response(status=status)
+
+    response.headers.add('Access-Control-Allow-credentials', 'true')
+
+    return response
+
+
+@app.route('/api/account/logout', methods=['POST'])
+@app.route('/api/v1/account/logout', methods=['POST'])
+@app.route('/api/v1.0/account/logout', methods=['POST'])
+def logout() -> Response:
+    """Logout"""
+    if 'id' in session:
+        session.pop('id')
+
+    response = Response()
     response.headers.add('Access-Control-Allow-credentials', 'true')
 
     return response
