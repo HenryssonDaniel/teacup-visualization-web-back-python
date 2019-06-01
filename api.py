@@ -43,8 +43,16 @@ def dashboard() -> Response:
 @app.route('/api/v1.0/account/logIn', methods=['POST'])
 def log_in() -> Response:
     """Log in"""
-    response = requests.post('http://localhost:8080/mysql/api/account/logIn',
-                             data=json.dumps(json.loads(request.data)),
+    response = log_in_data(json.loads(request.data))
+
+    response.headers.add('Access-Control-Allow-credentials', 'true')
+
+    return response
+
+
+def log_in_data(data) -> Response:
+    """Log in with data"""
+    response = requests.post('http://localhost:8080/mysql/api/account/logIn', data=json.dumps(data),
                              headers={'content-type': 'application/json'})
 
     status = response.status_code
@@ -60,16 +68,14 @@ def log_in() -> Response:
     else:
         response = Response(status=status)
 
-    response.headers.add('Access-Control-Allow-credentials', 'true')
-
     return response
 
 
-@app.route('/api/account/logout', methods=['POST'])
-@app.route('/api/v1/account/logout', methods=['POST'])
-@app.route('/api/v1.0/account/logout', methods=['POST'])
-def logout() -> Response:
-    """Logout"""
+@app.route('/api/account/logOut', methods=['POST'])
+@app.route('/api/v1/account/logOut', methods=['POST'])
+@app.route('/api/v1.0/account/logOut', methods=['POST'])
+def log_out() -> Response:
+    """Log out"""
     if 'id' in session:
         session.pop('id')
 
@@ -100,13 +106,15 @@ def recover() -> Response:
 @app.route('/api/v1.0/account/signUp', methods=['POST'])
 def sign_up() -> Response:
     """Sign up"""
-    if requests.post('http://localhost:8080/mysql/api/account/signUp', data=json.dumps(json.loads(request.data)),
+    data = json.loads(request.data)
+
+    if requests.post('http://localhost:8080/mysql/api/account/signUp', data=json.dumps(data),
                      headers={'content-type': 'application/json'}).status_code == 200:
-        response = jsonify({'some': 'data'})
+        response = log_in_data({"email": data["email"], "password": data["password"]})
     else:
         response = Response(status=401)
 
-    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-credentials', 'true')
 
     return response
 
