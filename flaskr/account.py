@@ -1,46 +1,22 @@
 #!/usr/bin/env
 # -*- coding: utf-8 -*-
-"""REST API"""
+"""Account API"""
 
-from flask import Flask
+from flask import Blueprint
 from flask import json
 from flask import jsonify
 from flask import request
 from flask import Response
 from flask import session
-from flask_cors import CORS
-from flask_session import Session
 
 import requests
 
-app = Flask(__name__)
-app.config['SESSION_TYPE'] = 'filesystem'
-
-cors = CORS(app)
-Session(app)
+blueprint = Blueprint('account', __name__, url_prefix='/api')
 
 
-@app.route('/api/dashboard', methods=['GET'])
-@app.route('/api/v1/dashboard', methods=['GET'])
-@app.route('/api/v1.0/dashboard', methods=['GET'])
-def dashboard() -> Response:
-    """Dashboard"""
-    if 'id' in session:
-        response = requests.get('http://localhost:8080/mysql/api/dashboard', data='{"id":"' + session["id"] + '"}',
-                                headers={'content-type': 'application/json'})
-
-        response = jsonify({'firstName': session["firstName"], "lastName": session["lastName"]})
-    else:
-        response = Response(status=401)
-
-    response.headers.add('Access-Control-Allow-credentials', 'true')
-
-    return response
-
-
-@app.route('/api/account/logIn', methods=['POST'])
-@app.route('/api/v1/account/logIn', methods=['POST'])
-@app.route('/api/v1.0/account/logIn', methods=['POST'])
+@blueprint.route('/account/logIn', methods=['POST'])
+@blueprint.route('/v1/account/logIn', methods=['POST'])
+@blueprint.route('/v1.0/account/logIn', methods=['POST'])
 def log_in() -> Response:
     """Log in"""
     response = log_in_data(json.loads(request.data))
@@ -71,9 +47,9 @@ def log_in_data(data) -> Response:
     return response
 
 
-@app.route('/api/account/logOut', methods=['POST'])
-@app.route('/api/v1/account/logOut', methods=['POST'])
-@app.route('/api/v1.0/account/logOut', methods=['POST'])
+@blueprint.route('/account/logOut', methods=['POST'])
+@blueprint.route('/v1/account/logOut', methods=['POST'])
+@blueprint.route('/v1.0/account/logOut', methods=['POST'])
 def log_out() -> Response:
     """Log out"""
     if 'id' in session:
@@ -85,9 +61,9 @@ def log_out() -> Response:
     return response
 
 
-@app.route('/api/account/recover', methods=['POST'])
-@app.route('/api/v1/account/recover', methods=['POST'])
-@app.route('/api/v1.0/account/recover', methods=['POST'])
+@blueprint.route('/account/recover', methods=['POST'])
+@blueprint.route('/v1/account/recover', methods=['POST'])
+@blueprint.route('/v1.0/account/recover', methods=['POST'])
 def recover() -> Response:
     """Recover account"""
     if requests.post('http://localhost:8080/mysql/api/account/recover', data=json.dumps(json.loads(request.data)),
@@ -101,9 +77,9 @@ def recover() -> Response:
     return response
 
 
-@app.route('/api/account/signUp', methods=['POST'])
-@app.route('/api/v1/account/signUp', methods=['POST'])
-@app.route('/api/v1.0/account/signUp', methods=['POST'])
+@blueprint.route('/account/signUp', methods=['POST'])
+@blueprint.route('/v1/account/signUp', methods=['POST'])
+@blueprint.route('/v1.0/account/signUp', methods=['POST'])
 def sign_up() -> Response:
     """Sign up"""
     data = json.loads(request.data)
@@ -119,5 +95,16 @@ def sign_up() -> Response:
     return response
 
 
-if __name__ == '__main__':
-    app.run()
+def user_required(view) -> Response:
+    """User required"""
+    def wrapped_view(**kwargs) -> Response:
+        """Wrapper view"""
+        if 'id' not in session:
+            response = Response(status=401)
+            response.headers.add('Access-Control-Allow-credentials', 'true')
+
+            return response
+
+        return view(**kwargs)
+
+    return wrapped_view
