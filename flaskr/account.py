@@ -2,14 +2,13 @@
 # -*- coding: utf-8 -*-
 """Account API"""
 
-from flask import Blueprint
-from flask import json
-from flask import jsonify
-from flask import request
-from flask import Response
-from flask import session
+from email.message import EmailMessage
+from flask import Blueprint, current_app as app, json, jsonify, request, Response, session, url_for
+from itsdangerous import BadSignature
+from itsdangerous import URLSafeSerializer
 
 import requests
+import smtplib
 
 blueprint = Blueprint('account', __name__, url_prefix='/api')
 
@@ -19,16 +18,7 @@ blueprint = Blueprint('account', __name__, url_prefix='/api')
 @blueprint.route('/v1.0/account/logIn', methods=['POST'])
 def log_in() -> Response:
     """Log in"""
-    response = log_in_data(json.loads(request.data))
-
-    response.headers.add('Access-Control-Allow-credentials', 'true')
-
-    return response
-
-
-def log_in_data(data) -> Response:
-    """Log in with data"""
-    response = requests.post('http://localhost:8080/mysql/api/account/logIn', data=json.dumps(data),
+    response = requests.post('http://localhost:8080/mysql/api/account/logIn', data=json.dumps(json.loads(request.data)),
                              headers={'content-type': 'application/json'})
 
     status = response.status_code
@@ -40,9 +30,8 @@ def log_in_data(data) -> Response:
         session['id'] = content["id"]
         session['lastName'] = content["lastName"]
 
-        response = Response()
-    else:
-        response = Response(status=status)
+    response = Response(status=status)
+    response.headers.add('Access-Control-Allow-credentials', 'true')
 
     return response
 
@@ -84,10 +73,40 @@ def sign_up() -> Response:
     """Sign up"""
     data = json.loads(request.data)
 
-    if requests.post('http://localhost:8080/mysql/api/account/signUp', data=json.dumps(data),
-                     headers={'content-type': 'application/json'}).status_code == 200:
-        response = log_in_data({"email": data["email"], "password": data["password"]})
-    else:
+    status = requests.post('http://localhost:8080/mysql/api/account/signUp', data=json.dumps(data),
+                           headers={'content-type': 'application/json'}).status_code
+    if status == 200:
+        email = data["email"]
+
+        email_message = EmailMessage()
+        email_message.set_content("Please activate your account by clicking here: " + request.url_root +
+                                  "api/account/activate/" + URLSafeSerializer(app.config['SECRET_KEY']).dumps(email))
+
+        email_message['Subject'] = 'Activate Teacup account'
+        email_message['From'] = 'noreply@teacup.com'
+        email_message['To'] = email
+
+        s = smtplib.SMTP('localhost', 1025)
+        s.send_message(email_message)
+        s.quit()
+
+    response = Response(status=status)
+    response.headers.add('Access-Control-Allow-credentials', 'true')
+
+    return response
+
+
+@blueprint.route('/account/activate/<token>', methods=['GET'])
+@blueprint.route('/v1/account/activate/<token>', methods=['GET'])
+@blueprint.route('/v1.0/account/activate/<token>', methods=['GET'])
+def activate(token) -> Response:
+    """Sign up"""
+    try:
+        email = URLSafeSerializer(app.config['SECRET_KEY']).loads(token)
+        response = Response(status=requests.post('http://localhost:8080/mysql/api/account/activate',
+                                                 data=json.dumps({"email": email}),
+                                                 headers={'content-type': 'application/json'}).status_code)
+    except BadSignature:
         response = Response(status=401)
 
     response.headers.add('Access-Control-Allow-credentials', 'true')
