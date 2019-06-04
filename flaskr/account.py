@@ -45,7 +45,15 @@ def authorized() -> Response:
 @blueprint.route('/v1.0/account/logIn', methods=['POST'])
 def log_in() -> Response:
     """Log in"""
-    response = requests.post('http://localhost:8080/mysql/api/account/logIn', data=json.dumps(json.loads(request.data)),
+    response = Response(status=log_in_data(json.loads(request.data)))
+    response.headers.add('Access-Control-Allow-credentials', 'true')
+
+    return response
+
+
+def log_in_data(data) -> int:
+    """Log in with data"""
+    response = requests.post('http://localhost:8080/mysql/api/account/logIn', data=json.dumps(data),
                              headers={'content-type': 'application/json'})
 
     status = response.status_code
@@ -57,10 +65,7 @@ def log_in() -> Response:
         session['id'] = content["id"]
         session['lastName'] = content["lastName"]
 
-    response = Response(status=status)
-    response.headers.add('Access-Control-Allow-credentials', 'true')
-
-    return response
+    return status
 
 
 @blueprint.route('/account/logOut', methods=['POST'])
@@ -113,9 +118,11 @@ def sign_up() -> Response:
         email_message['From'] = 'noreply@teacup.com'
         email_message['To'] = email
 
-        s = smtplib.SMTP('localhost', 1025)
-        s.send_message(email_message)
-        s.quit()
+        smtp = smtplib.SMTP('localhost', 1025)
+        smtp.send_message(email_message)
+        smtp.quit()
+
+        status = log_in_data({"email": email, "password": data["password"]})
 
     response = Response(status=status)
     response.headers.add('Access-Control-Allow-credentials', 'true')
