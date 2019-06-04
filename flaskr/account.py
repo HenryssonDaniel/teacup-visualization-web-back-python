@@ -3,7 +3,7 @@
 """Account API"""
 
 from email.message import EmailMessage
-from flask import Blueprint, current_app as app, json, jsonify, request, Response, session, url_for
+from flask import Blueprint, current_app as app, json, jsonify, request, Response, session
 from itsdangerous import BadSignature
 from itsdangerous import URLSafeSerializer
 
@@ -79,10 +79,10 @@ def sign_up() -> Response:
         email = data["email"]
 
         email_message = EmailMessage()
-        email_message.set_content("Please activate your account by clicking here: " + request.url_root +
-                                  "api/account/activate/" + URLSafeSerializer(app.config['SECRET_KEY']).dumps(email))
+        email_message.set_content("Please verify your account by clicking here: " + request.url_root +
+                                  "api/account/verify/" + URLSafeSerializer(app.config['SECRET_KEY']).dumps(email))
 
-        email_message['Subject'] = 'Activate Teacup account'
+        email_message['Subject'] = 'Verify your Teacup account'
         email_message['From'] = 'noreply@teacup.com'
         email_message['To'] = email
 
@@ -91,24 +91,6 @@ def sign_up() -> Response:
         s.quit()
 
     response = Response(status=status)
-    response.headers.add('Access-Control-Allow-credentials', 'true')
-
-    return response
-
-
-@blueprint.route('/account/activate/<token>', methods=['GET'])
-@blueprint.route('/v1/account/activate/<token>', methods=['GET'])
-@blueprint.route('/v1.0/account/activate/<token>', methods=['GET'])
-def activate(token) -> Response:
-    """Sign up"""
-    try:
-        email = URLSafeSerializer(app.config['SECRET_KEY']).loads(token)
-        response = Response(status=requests.post('http://localhost:8080/mysql/api/account/activate',
-                                                 data=json.dumps({"email": email}),
-                                                 headers={'content-type': 'application/json'}).status_code)
-    except BadSignature:
-        response = Response(status=401)
-
     response.headers.add('Access-Control-Allow-credentials', 'true')
 
     return response
@@ -127,3 +109,21 @@ def user_required(view) -> Response:
         return view(**kwargs)
 
     return wrapped_view
+
+
+@blueprint.route('/account/verify/<token>', methods=['GET'])
+@blueprint.route('/v1/account/verify/<token>', methods=['GET'])
+@blueprint.route('/v1.0/account/verify/<token>', methods=['GET'])
+def verify(token) -> Response:
+    """Sign up"""
+    try:
+        email = URLSafeSerializer(app.config['SECRET_KEY']).loads(token)
+        response = Response(status=requests.post('http://localhost:8080/mysql/api/account/verify',
+                                                 data=json.dumps({"email": email}),
+                                                 headers={'content-type': 'application/json'}).status_code)
+    except BadSignature:
+        response = Response(status=401)
+
+    response.headers.add('Access-Control-Allow-credentials', 'true')
+
+    return response
