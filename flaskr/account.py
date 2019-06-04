@@ -13,6 +13,33 @@ import smtplib
 blueprint = Blueprint('account', __name__, url_prefix='/api')
 
 
+def user_required(view) -> Response:
+    """User required"""
+    def wrapped_view(**kwargs) -> Response:
+        """Wrapper view"""
+        if 'id' not in session:
+            response = Response(status=401)
+            response.headers.add('Access-Control-Allow-credentials', 'true')
+
+            return response
+
+        return view(**kwargs)
+
+    return wrapped_view
+
+
+@blueprint.route('/account/authorized', methods=['GET'])
+@blueprint.route('/v1/account/authorized', methods=['GET'])
+@blueprint.route('/v1.0/account/authorized', methods=['GET'])
+@user_required
+def authorized() -> Response:
+    """Log in"""
+    response = Response()
+    response.headers.add('Access-Control-Allow-credentials', 'true')
+
+    return response
+
+
 @blueprint.route('/account/logIn', methods=['POST'])
 @blueprint.route('/v1/account/logIn', methods=['POST'])
 @blueprint.route('/v1.0/account/logIn', methods=['POST'])
@@ -96,34 +123,21 @@ def sign_up() -> Response:
     return response
 
 
-def user_required(view) -> Response:
-    """User required"""
-    def wrapped_view(**kwargs) -> Response:
-        """Wrapper view"""
-        if 'id' not in session:
-            response = Response(status=401)
-            response.headers.add('Access-Control-Allow-credentials', 'true')
-
-            return response
-
-        return view(**kwargs)
-
-    return wrapped_view
-
-
 @blueprint.route('/account/verify/<token>', methods=['GET'])
 @blueprint.route('/v1/account/verify/<token>', methods=['GET'])
 @blueprint.route('/v1.0/account/verify/<token>', methods=['GET'])
-def verify(token) -> Response:
-    """Sign up"""
+def verify(token) -> str:
+    """Verify"""
     try:
         email = URLSafeSerializer(app.config['SECRET_KEY']).loads(token)
-        response = Response(status=requests.post('http://localhost:8080/mysql/api/account/verify',
-                                                 data=json.dumps({"email": email}),
-                                                 headers={'content-type': 'application/json'}).status_code)
+        status = requests.post('http://localhost:8080/mysql/api/account/verify', data=json.dumps({"email": email}),
+                               headers={'content-type': 'application/json'}).status_code
+
+        if status == 200:
+            message = 'The account have been verified'
+        else:
+            message = 'The account could not be verified, please try again later'
     except BadSignature:
-        response = Response(status=401)
+        message = 'The token is not valid'
 
-    response.headers.add('Access-Control-Allow-credentials', 'true')
-
-    return response
+    return message
