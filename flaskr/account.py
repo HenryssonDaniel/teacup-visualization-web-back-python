@@ -3,9 +3,9 @@
 """Account API"""
 
 from email.message import EmailMessage
-from flask import Blueprint, current_app as app, json, jsonify, request, Response, session
+from flask import Blueprint, current_app as app, json, request, Response, session
 from itsdangerous import BadSignature
-from itsdangerous import URLSafeSerializer
+from itsdangerous import URLSafeSerializer, URLSafeTimedSerializer
 
 import requests
 import smtplib
@@ -15,17 +15,34 @@ blueprint = Blueprint('account', __name__, url_prefix='/api')
 
 def user_required(view) -> Response:
     """User required"""
-    def wrapped_view(**kwargs) -> Response:
+    def wrapped_user_view(**kwargs) -> Response:
         """Wrapper view"""
-        if 'id' not in session:
-            response = Response(status=401)
+        if 'id' in session:
+            return view(**kwargs)
+
+        response = Response(status=401)
+        response.headers.add('Access-Control-Allow-credentials', 'true')
+
+        return response
+
+    wrapped_user_view.__name__ = view.__name__
+    return wrapped_user_view
+
+
+def __no_user_required(view) -> Response:
+    """No user required"""
+    def wrapped_no_user_view(**kwargs) -> Response:
+        """Wrapper view"""
+        if 'id' in session:
+            response = Response(status=403)
             response.headers.add('Access-Control-Allow-credentials', 'true')
 
             return response
 
         return view(**kwargs)
 
-    return wrapped_view
+    wrapped_no_user_view.__name__ = view.__name__
+    return wrapped_no_user_view
 
 
 @blueprint.route('/account/authorized', methods=['GET'])
@@ -43,38 +60,22 @@ def authorized() -> Response:
 @blueprint.route('/account/logIn', methods=['POST'])
 @blueprint.route('/v1/account/logIn', methods=['POST'])
 @blueprint.route('/v1.0/account/logIn', methods=['POST'])
+@__no_user_required
 def log_in() -> Response:
     """Log in"""
-    response = Response(status=log_in_data(json.loads(request.data)))
+    response = Response(status=__log_in_data(json.loads(request.data)))
     response.headers.add('Access-Control-Allow-credentials', 'true')
 
     return response
 
 
-def log_in_data(data) -> int:
-    """Log in with data"""
-    response = requests.post('http://localhost:8080/mysql/api/account/logIn', data=json.dumps(data),
-                             headers={'content-type': 'application/json'})
-
-    status = response.status_code
-    if status == 200:
-        content = response.json()
-
-        session['email'] = content["email"]
-        session['firstName'] = content["firstName"]
-        session['id'] = content["id"]
-        session['lastName'] = content["lastName"]
-
-    return status
-
-
 @blueprint.route('/account/logOut', methods=['POST'])
 @blueprint.route('/v1/account/logOut', methods=['POST'])
 @blueprint.route('/v1.0/account/logOut', methods=['POST'])
+@user_required
 def log_out() -> Response:
     """Log out"""
-    if 'id' in session:
-        session.pop('id')
+    session.pop('id')
 
     response = Response()
     response.headers.add('Access-Control-Allow-credentials', 'true')
@@ -85,15 +86,21 @@ def log_out() -> Response:
 @blueprint.route('/account/recover', methods=['POST'])
 @blueprint.route('/v1/account/recover', methods=['POST'])
 @blueprint.route('/v1.0/account/recover', methods=['POST'])
+@__no_user_required
 def recover() -> Response:
     """Recover account"""
-    if requests.post('http://localhost:8080/mysql/api/account/recover', data=json.dumps(json.loads(request.data)),
-                     headers={'content-type': 'application/json'}).status_code == 200:
-        response = jsonify({'some': 'data'})
-    else:
-        response = Response(status=401)
+    data = json.loads(request.data)
 
-    response.headers.add('Access-Control-Allow-Origin', '*')
+    status = requests.post('http://localhost:8080/mysql/api/account/recover', data=json.dumps(data),
+                           headers={'content-type': 'application/json'}).status_code
+
+    if status == 200:
+        email = data["email"]
+        __send_email("The recover code: " + URLSafeTimedSerializer(app.config['SECRET_KEY']).dumps(email),
+                     'Recover', email)
+
+    response = Response(status=status)
+    response.headers.add('Access-Control-Allow-credentials', 'true')
 
     return response
 
@@ -101,6 +108,7 @@ def recover() -> Response:
 @blueprint.route('/account/signUp', methods=['POST'])
 @blueprint.route('/v1/account/signUp', methods=['POST'])
 @blueprint.route('/v1.0/account/signUp', methods=['POST'])
+@__no_user_required
 def sign_up() -> Response:
     """Sign up"""
     data = json.loads(request.data)
@@ -110,19 +118,10 @@ def sign_up() -> Response:
     if status == 200:
         email = data["email"]
 
-        email_message = EmailMessage()
-        email_message.set_content("Please verify your account by clicking here: " + request.url_root +
-                                  "api/account/verify/" + URLSafeSerializer(app.config['SECRET_KEY']).dumps(email))
+        __send_email("Please verify your account by clicking here: " + request.url_root + "api/account/verify/" +
+                     URLSafeSerializer(app.config['SECRET_KEY']).dumps(email), 'Verify', email)
 
-        email_message['Subject'] = 'Verify your Teacup account'
-        email_message['From'] = 'noreply@teacup.com'
-        email_message['To'] = email
-
-        smtp = smtplib.SMTP('localhost', 1025)
-        smtp.send_message(email_message)
-        smtp.quit()
-
-        status = log_in_data({"email": email, "password": data["password"]})
+        status = __log_in_data({"email": email, "password": data["password"]})
 
     response = Response(status=status)
     response.headers.add('Access-Control-Allow-credentials', 'true')
@@ -148,3 +147,34 @@ def verify(token) -> str:
         message = 'The token is not valid'
 
     return message
+
+
+def __log_in_data(data) -> int:
+    """Log in with data"""
+    response = requests.post('http://localhost:8080/mysql/api/account/logIn', data=json.dumps(data),
+                             headers={'content-type': 'application/json'})
+
+    status = response.status_code
+    if status == 200:
+        content = response.json()
+
+        session['email'] = content["email"]
+        session['firstName'] = content["firstName"]
+        session['id'] = content["id"]
+        session['lastName'] = content["lastName"]
+
+    return status
+
+
+def __send_email(content, subject, to) -> None:
+    """Send email"""
+    email_message = EmailMessage()
+    email_message.set_content(content)
+
+    email_message['Subject'] = subject + ' your Teacup account'
+    email_message['From'] = 'noreply@teacup.com'
+    email_message['To'] = to
+
+    smtp = smtplib.SMTP('localhost', 1025)
+    smtp.send_message(email_message)
+    smtp.quit()
