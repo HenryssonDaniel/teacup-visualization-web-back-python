@@ -57,6 +57,28 @@ def authorized() -> Response:
     return response
 
 
+@blueprint.route('/account/changePassword', methods=['POST'])
+@blueprint.route('/v1/account/changePassword', methods=['POST'])
+@blueprint.route('/v1.0/account/changePassword', methods=['POST'])
+@__no_user_required
+def change_password() -> Response:
+    """Log in"""
+    data = json.loads(request.data)
+
+    try:
+        email = URLSafeTimedSerializer(app.config['SECRET_KEY']).loads(data["token"], max_age=3600)
+        status = requests.post('http://localhost:8080/mysql/api/account/changePassword',
+                               data=json.dumps({"email": email, "password": data["password"]}),
+                               headers={'content-type': 'application/json'}).status_code
+    except BadSignature:
+        status = 403
+
+    response = Response(status=status)
+    response.headers.add('Access-Control-Allow-credentials', 'true')
+
+    return response
+
+
 @blueprint.route('/account/logIn', methods=['POST'])
 @blueprint.route('/v1/account/logIn', methods=['POST'])
 @blueprint.route('/v1.0/account/logIn', methods=['POST'])
