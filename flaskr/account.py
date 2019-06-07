@@ -67,9 +67,14 @@ def change_password() -> Response:
 
     try:
         email = URLSafeTimedSerializer(app.config['SECRET_KEY']).loads(data["token"], max_age=3600)
+        password = data["password"]
+
         status = requests.post('http://localhost:8080/mysql/api/account/changePassword',
-                               data=json.dumps({"email": email, "password": data["password"]}),
+                               data=json.dumps({"authorized": False, "email": email, "password": password}),
                                headers={'content-type': 'application/json'}).status_code
+
+        if status == 200:
+            status = __log_in_data({"email": email, "password": password})
     except BadSignature:
         status = 403
 
