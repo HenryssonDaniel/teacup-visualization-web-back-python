@@ -2,12 +2,9 @@
 # -*- coding: utf-8 -*-
 """Dashboard API"""
 
-from flask import Blueprint
-from flask import jsonify
-from flask import Response
-from flask import session
-
+from flask import Blueprint, current_app as app, json, jsonify, Response, session
 from flaskr.account import user_required
+
 import requests
 
 blueprint = Blueprint('dashboard', __name__, url_prefix='/api')
@@ -19,8 +16,8 @@ blueprint = Blueprint('dashboard', __name__, url_prefix='/api')
 @user_required
 def dashboard() -> Response:
     """Dashboard"""
-    response = requests.get('http://localhost:8080/mysql/api/dashboard', data='{"id":"' + session["id"] + '"}',
-                            headers={'content-type': 'application/json'})
+    response = requests.get(app.config['SERVICE_VISUALIZATION'] + '/api/dashboard',
+                            data=json.dumps({"id": session["id"]}), headers={'content-type': 'application/json'})
 
     response = jsonify({'firstName': session["firstName"], "lastName": session["lastName"]})
     response.headers.add('Access-Control-Allow-credentials', 'true')

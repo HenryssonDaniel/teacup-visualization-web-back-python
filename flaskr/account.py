@@ -69,7 +69,7 @@ def change_password() -> Response:
         email = URLSafeTimedSerializer(app.config['SECRET_KEY']).loads(data["token"], max_age=3600)
         password = data["password"]
 
-        status = requests.post('http://localhost:8080/mysql/api/account/changePassword',
+        status = requests.post(app.config['SERVICE_VISUALIZATION'] + '/api/account/changePassword',
                                data=json.dumps({"authorized": False, "email": email, "password": password}),
                                headers={'content-type': 'application/json'}).status_code
 
@@ -118,7 +118,7 @@ def recover() -> Response:
     """Recover account"""
     data = json.loads(request.data)
 
-    status = requests.post('http://localhost:8080/mysql/api/account/recover', data=json.dumps(data),
+    status = requests.post(app.config['SERVICE_VISUALIZATION'] + '/api/account/recover', data=json.dumps(data),
                            headers={'content-type': 'application/json'}).status_code
 
     if status == 200:
@@ -140,7 +140,7 @@ def sign_up() -> Response:
     """Sign up"""
     data = json.loads(request.data)
 
-    status = requests.post('http://localhost:8080/mysql/api/account/signUp', data=json.dumps(data),
+    status = requests.post(app.config['SERVICE_VISUALIZATION'] + '/api/account/signUp', data=json.dumps(data),
                            headers={'content-type': 'application/json'}).status_code
     if status == 200:
         email = data["email"]
@@ -163,7 +163,8 @@ def verify(token) -> str:
     """Verify"""
     try:
         email = URLSafeSerializer(app.config['SECRET_KEY']).loads(token)
-        status = requests.post('http://localhost:8080/mysql/api/account/verify', data=json.dumps({"email": email}),
+        status = requests.post(app.config['SERVICE_VISUALIZATION'] + '/api/account/verify',
+                               data=json.dumps({"email": email}),
                                headers={'content-type': 'application/json'}).status_code
 
         if status == 200:
@@ -178,7 +179,7 @@ def verify(token) -> str:
 
 def __log_in_data(data) -> int:
     """Log in with data"""
-    response = requests.post('http://localhost:8080/mysql/api/account/logIn', data=json.dumps(data),
+    response = requests.post(app.config['SERVICE_VISUALIZATION'] + '/api/account/logIn', data=json.dumps(data),
                              headers={'content-type': 'application/json'})
 
     status = response.status_code
@@ -199,9 +200,9 @@ def __send_email(content, subject, to) -> None:
     email_message.set_content(content)
 
     email_message['Subject'] = subject + ' your Teacup account'
-    email_message['From'] = 'noreply@teacup.com'
+    email_message['From'] = app.config['SMTP_FROM']
     email_message['To'] = to
 
-    smtp = smtplib.SMTP('localhost', 1025)
+    smtp = smtplib.SMTP(app.config['SMTP_HOST'], app.config['SMTP_PORT'])
     smtp.send_message(email_message)
     smtp.quit()
