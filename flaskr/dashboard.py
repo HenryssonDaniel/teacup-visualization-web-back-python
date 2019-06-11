@@ -14,12 +14,17 @@ blueprint = Blueprint('dashboard', __name__, url_prefix='/api')
 @blueprint.route('/v1/dashboard', methods=['GET'])
 @blueprint.route('/v1.0/dashboard', methods=['GET'])
 @user_required
-def dashboard() -> Response:
+def dashboard() -> [Response, int]:
     """Dashboard"""
-    response = requests.get(app.config['SERVICE_VISUALIZATION'] + '/api/dashboard',
-                            data=json.dumps({"id": session["id"]}), headers={'content-type': 'application/json'})
+    response = requests.get(app.config['SERVICE_REPORT'] + '/api/session/summary')
 
-    response = jsonify({'firstName': session["firstName"], "lastName": session["lastName"]})
+    content = {"account": {'firstName': session["firstName"], "lastName": session["lastName"]}}
+
+    status = response.status_code
+    if status == 200:
+        content["sessions"] = response.json()["sessions"]
+
+    response = jsonify(content)
     response.headers.add('Access-Control-Allow-credentials', 'true')
 
-    return response
+    return response, status

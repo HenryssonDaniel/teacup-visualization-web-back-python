@@ -12,6 +12,7 @@ def create_app(test_config=None) -> Flask:
     app = Flask(__name__, instance_relative_config=True)
     app.config.from_mapping(
         SECRET_KEY='dev',
+        SERVICE_REPORT='http://localhost:8080/mysql',
         SERVICE_VISUALIZATION='http://localhost:8080/mysql',
         SESSION_TYPE='filesystem',
         SMTP_FROM='noreply@teacup.com',
