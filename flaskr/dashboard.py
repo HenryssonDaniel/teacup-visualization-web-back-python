@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """Dashboard API"""
 
-from flask import Blueprint, current_app as app, json, jsonify, Response, session
+from flask import Blueprint, current_app as app, jsonify, Response, session
 from flaskr.account import user_required
 
 import requests
