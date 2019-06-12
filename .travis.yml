@@ -22,5 +22,5 @@ matrix:
     - python: "pypy3.5"
       env: FULL_RUN=false
 script:
-  - python -m unittest discover tests
+  - coverage run -m unittest discover tests
   - if [ "$FULL_RUN" != "false" ]; then sonar-scanner; fi
