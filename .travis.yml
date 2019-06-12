@@ -6,6 +6,9 @@ addons:
 dist: xenial
 language: python
 matrix:
+  allow_failures:
+    - python: "3.8-dev"
+    - python: "nightly"
   include:
     - python: "3.4"
       env: FULL_RUN=false
@@ -22,5 +25,5 @@ matrix:
     - python: "pypy3.5"
       env: FULL_RUN=false
 script:
-  - coverage run -m unittest discover tests
-  - if [ "$FULL_RUN" != "false" ]; then sonar-scanner; fi
+  - if [ "$FULL_RUN" == "false" ]; then python -m unittest discover tests; fi
+  - if [ "$FULL_RUN" != "false" ]; then coverage run -m unittest discover tests; coverage xml -i; sonar-scanner; fi
