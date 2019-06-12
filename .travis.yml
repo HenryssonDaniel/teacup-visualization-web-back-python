@@ -7,8 +7,6 @@ dist: xenial
 language: python
 matrix:
   include:
-    - python: "2.7"
-      env: FULL_RUN=false
     - python: "3.4"
       env: FULL_RUN=false
     - python: "3.5"
