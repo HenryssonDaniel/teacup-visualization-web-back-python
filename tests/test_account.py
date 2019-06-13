@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """Account tests"""
 
-from flask import Flask
+from flask import Flask, Response
 from itsdangerous import URLSafeTimedSerializer
 from unittest import mock
 from unittest.mock import MagicMock
@@ -48,7 +48,7 @@ class TestInit(unittest.TestCase):
         client = app.test_client()
 
         with client.session_transaction() as session:
-            session['id'] = 'a value'
+            session['id'] = 'test'
 
         self.assertEqual(client.get('/api/account/authorized').status_code, 200)
 
@@ -70,7 +70,8 @@ class TestInit(unittest.TestCase):
                                                 data='{"password": "password", "token": "' + token + '"}').status_code,
                          400)
 
-    def test_change_password_request_error(self) -> None:
+    @mock.patch('requests.post', return_value=Response(status=500))
+    def test_change_password_request_error(self, _) -> None:
         token = URLSafeTimedSerializer(app.config['SECRET_KEY']).dumps('test@teacup.com')
         self.assertEqual(app.test_client().post('/api/account/changePassword',
                                                 data='{"password": "password", "token": "' + token + '"}').status_code,
@@ -84,9 +85,30 @@ class TestInit(unittest.TestCase):
         client = app.test_client()
 
         with client.session_transaction() as session:
-            session['id'] = 'a value'
+            session['id'] = 'test'
 
         self.assertEqual(client.post('/api/account/changePassword').status_code, 403)
+
+    @mock.patch('requests.post', return_value=MockResponse({"email": "email", "firstName": "firstName", "id": "id",
+                                                            "lastName": "lastName"}, 200))
+    def test_log_in(self, _) -> None:
+        self.assertEqual(app.test_client().post('/api/account/logIn',
+                                                data='{"email": "email", "password": "password"}').status_code,
+                         200)
+
+    @mock.patch('requests.post', side_effect=__mocked_requests_post_log_in_error)
+    def test_log_in_error(self, _) -> None:
+        self.assertEqual(app.test_client().post('/api/account/logIn',
+                                                data='{"email": "email", "password": "password"}').status_code,
+                         400)
+
+    def test_log_in_false(self) -> None:
+        client = app.test_client()
+
+        with client.session_transaction() as session:
+            session['id'] = 'test'
+
+        self.assertEqual(client.post('/api/account/logIn').status_code, 403)
 
 
 if __name__ == '__main__':
