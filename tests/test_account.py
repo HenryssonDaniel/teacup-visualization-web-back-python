@@ -46,10 +46,7 @@ class TestInit(unittest.TestCase):
 
     def test_authorized(self) -> None:
         client = app.test_client()
-
-        with client.session_transaction() as session:
-            session['id'] = 'test'
-
+        self.__set_session_id(client)
         self.assertEqual(client.get('/api/account/authorized').status_code, 200)
 
     def test_authorized_false(self) -> None:
@@ -83,10 +80,7 @@ class TestInit(unittest.TestCase):
 
     def test_change_password_false(self) -> None:
         client = app.test_client()
-
-        with client.session_transaction() as session:
-            session['id'] = 'test'
-
+        self.__set_session_id(client)
         self.assertEqual(client.post('/api/account/changePassword').status_code, 403)
 
     @mock.patch('requests.post', return_value=MockResponse({"email": "email", "firstName": "firstName", "id": "id",
@@ -104,11 +98,21 @@ class TestInit(unittest.TestCase):
 
     def test_log_in_false(self) -> None:
         client = app.test_client()
+        self.__set_session_id(client)
+        self.assertEqual(client.post('/api/account/logIn').status_code, 403)
 
+    def test_log_out(self) -> None:
+        client = app.test_client()
+        self.__set_session_id(client)
+        self.assertEqual(client.post('/api/account/logOut').status_code, 200)
+
+    def test_log_out_false(self) -> None:
+        self.assertEqual(app.test_client().post('/api/account/logOut').status_code, 401)
+
+    @staticmethod
+    def __set_session_id(client) -> None:
         with client.session_transaction() as session:
             session['id'] = 'test'
-
-        self.assertEqual(client.post('/api/account/logIn').status_code, 403)
 
 
 if __name__ == '__main__':
