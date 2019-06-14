@@ -32,7 +32,8 @@ class MockResponse:
 
 class TestInit(unittest.TestCase):
     def __mocked_requests_post_log_in_error(*args, **_) -> MockResponse:
-        if '/api/account/changePassword' in args[0]:
+        arg = args[0]
+        if '/api/account/changePassword' in arg or '/api/account/signUp' in arg:
             status_code = 200
         else:
             status_code = 400
@@ -125,6 +126,28 @@ class TestInit(unittest.TestCase):
         client = app.test_client()
         self.__set_session_id(client)
         self.assertEqual(client.post('/api/account/recover').status_code, 403)
+
+    @mock.patch('requests.post', return_value=MockResponse({"email": "email", "firstName": "firstName", "id": "id",
+                                                            "lastName": "lastName"}, 200))
+    @mock.patch('smtplib.SMTP', return_value=MagicMock())
+    def test_sign_up(self, _, __) -> None:
+        self.assertEqual(app.test_client().post('/api/account/signUp',
+                                                data='{"email": "email", "password": "password"}').status_code, 200)
+
+    @mock.patch('requests.post', side_effect=__mocked_requests_post_log_in_error)
+    @mock.patch('smtplib.SMTP', return_value=MagicMock())
+    def test_sign_up_log_in_error(self, _, __) -> None:
+        self.assertEqual(app.test_client().post('/api/account/signUp',
+                                                data='{"email": "email", "password": "password"}').status_code, 400)
+
+    @mock.patch('requests.post', return_value=Response(status=500))
+    def test_sign_up_error(self, _) -> None:
+        self.assertEqual(app.test_client().post('/api/account/signUp', data='{"email": "email"}').status_code, 500)
+
+    def test_sign_up_false(self) -> None:
+        client = app.test_client()
+        self.__set_session_id(client)
+        self.assertEqual(client.post('/api/account/signUp').status_code, 403)
 
     @staticmethod
     def __set_session_id(client) -> None:
