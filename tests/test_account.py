@@ -13,6 +13,9 @@ import unittest
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'dev'
 app.config['SERVICE_VISUALIZATION'] = 'http://localhost:8080/mysql'
+app.config['SMTP_FROM'] = 'noreply@teacup.com'
+app.config['SMTP_HOST'] = 'localhost'
+app.config['SMTP_PORT'] = '1025'
 app.register_blueprint(flaskr.account.blueprint)
 
 
@@ -108,6 +111,20 @@ class TestInit(unittest.TestCase):
 
     def test_log_out_false(self) -> None:
         self.assertEqual(app.test_client().post('/api/account/logOut').status_code, 401)
+
+    @mock.patch('requests.post', return_value=Response())
+    @mock.patch('smtplib.SMTP', return_value=MagicMock())
+    def test_recover(self, _, __) -> None:
+        self.assertEqual(app.test_client().post('/api/account/recover', data='{"email": "email"}').status_code, 200)
+
+    @mock.patch('requests.post', return_value=Response(status=500))
+    def test_recover_error(self, _) -> None:
+        self.assertEqual(app.test_client().post('/api/account/recover', data='{"email": "email"}').status_code, 500)
+
+    def test_recover_false(self) -> None:
+        client = app.test_client()
+        self.__set_session_id(client)
+        self.assertEqual(client.post('/api/account/recover').status_code, 403)
 
     @staticmethod
     def __set_session_id(client) -> None:
