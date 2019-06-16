@@ -3,7 +3,7 @@
 """Account tests"""
 
 from flask import Flask, Response
-from itsdangerous import URLSafeTimedSerializer
+from itsdangerous import URLSafeSerializer, URLSafeTimedSerializer
 from unittest import mock
 from unittest.mock import MagicMock
 
@@ -148,6 +148,20 @@ class TestInit(unittest.TestCase):
         client = app.test_client()
         self.__set_session_id(client)
         self.assertEqual(client.post('/api/account/signUp').status_code, 403)
+
+    @mock.patch('requests.post', return_value=Response(status=200))
+    def test_verify(self, _) -> None:
+        token = URLSafeSerializer(app.config['SECRET_KEY']).dumps('test@teacup.com')
+        self.assertEqual(app.test_client().get('/api/account/verify/' + token).data, b'The account have been verified')
+
+    @mock.patch('requests.post', return_value=Response(status=500))
+    def test_verify_error(self, _) -> None:
+        token = URLSafeSerializer(app.config['SECRET_KEY']).dumps('test@teacup.com')
+        self.assertEqual(app.test_client().get('/api/account/verify/' + token).data,
+                         b'The account could not be verified, please try again later')
+
+    def test_verify_bad_token(self) -> None:
+        self.assertEqual(app.test_client().get('/api/account/verify/token').data, b'The token is not valid')
 
     @staticmethod
     def __set_session_id(client) -> None:
