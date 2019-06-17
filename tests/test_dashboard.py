@@ -10,7 +10,6 @@ import unittest
 
 DASHBOARD = '/api/dashboard'
 GET = 'requests.get'
-SESSIONS = {"sessions": []}
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'dev'
@@ -30,7 +29,7 @@ class MockResponse:
 
 
 class TestInit(unittest.TestCase):
-    @mock.patch(GET, return_value=MockResponse(SESSIONS, 200))
+    @mock.patch(GET, return_value=MockResponse({"sessions": []}, 200))
     def test_dashboard(self, _) -> None:
         client = app.test_client()
         self.__set_session_id(client)
