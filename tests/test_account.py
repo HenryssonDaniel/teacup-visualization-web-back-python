@@ -10,8 +10,24 @@ from unittest.mock import MagicMock
 import flaskr.account
 import unittest
 
+ACCOUNT = {"email": "email", "firstName": "firstName", "id": "id", "lastName": "lastName"}
+AUTHORIZED = '/api/account/authorized'
+CHANGE_PASSWORD = '/api/account/changePassword'
+EMAIL_DATA = '{"email": "email"}'
+LOG_IN = '/api/account/logIn'
+LOG_IN_DATA = '{"email": "email", "password": "password"}'
+LOG_OUT = '/api/account/logOut'
+PASSWORD_TOKEN = '{"password": "password", "token": "'
+POST = 'requests.post'
+RECOVER = '/api/account/recover'
+SECRET_KEY = 'SECRET_KEY'
+SIGN_UP = '/api/account/signUp'
+SMTP = 'smtplib.SMTP'
+TEST_EMAIL = 'test@teacup.com'
+VERIFY = '/api/account/verify/'
+
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'dev'
+app.config[SECRET_KEY] = 'dev'
 app.config['SERVICE_VISUALIZATION'] = 'http://localhost:8080/mysql'
 app.config['SMTP_FROM'] = 'noreply@teacup.com'
 app.config['SMTP_HOST'] = 'localhost'
@@ -33,7 +49,7 @@ class MockResponse:
 class TestInit(unittest.TestCase):
     def __mocked_requests_post_log_in_error(*args, **_) -> MockResponse:
         arg = args[0]
-        if '/api/account/changePassword' in arg or '/api/account/signUp' in arg:
+        if CHANGE_PASSWORD in arg or SIGN_UP in arg:
             status_code = 200
         else:
             status_code = 400
@@ -51,117 +67,110 @@ class TestInit(unittest.TestCase):
     def test_authorized(self) -> None:
         client = app.test_client()
         self.__set_session_id(client)
-        self.assertEqual(client.get('/api/account/authorized').status_code, 200)
+        self.assertEqual(client.get(AUTHORIZED).status_code, 200)
 
     def test_authorized_false(self) -> None:
-        self.assertEqual(app.test_client().get('/api/account/authorized').status_code, 401)
+        self.assertEqual(app.test_client().get(AUTHORIZED).status_code, 401)
 
-    @mock.patch('requests.post', return_value=MockResponse({"email": "email", "firstName": "firstName", "id": "id",
-                                                            "lastName": "lastName"}, 200))
+    @mock.patch(POST, return_value=MockResponse(ACCOUNT, 200))
     def test_change_password(self, _) -> None:
-        token = URLSafeTimedSerializer(app.config['SECRET_KEY']).dumps('test@teacup.com')
-        self.assertEqual(app.test_client().post('/api/account/changePassword',
-                                                data='{"password": "password", "token": "' + token + '"}').status_code,
+        self.assertEqual(app.test_client().post(CHANGE_PASSWORD,
+                                                data=PASSWORD_TOKEN + self.__create_timed_token() + '"}').status_code,
                          200)
 
-    @mock.patch('requests.post', side_effect=__mocked_requests_post_log_in_error)
+    @mock.patch(POST, side_effect=__mocked_requests_post_log_in_error)
     def test_change_password_log_in_error(self, _) -> None:
-        token = URLSafeTimedSerializer(app.config['SECRET_KEY']).dumps('test@teacup.com')
-        self.assertEqual(app.test_client().post('/api/account/changePassword',
-                                                data='{"password": "password", "token": "' + token + '"}').status_code,
+        self.assertEqual(app.test_client().post(CHANGE_PASSWORD,
+                                                data=PASSWORD_TOKEN + self.__create_timed_token() + '"}').status_code,
                          400)
 
-    @mock.patch('requests.post', return_value=Response(status=500))
+    @mock.patch(POST, return_value=Response(status=500))
     def test_change_password_request_error(self, _) -> None:
-        token = URLSafeTimedSerializer(app.config['SECRET_KEY']).dumps('test@teacup.com')
-        self.assertEqual(app.test_client().post('/api/account/changePassword',
-                                                data='{"password": "password", "token": "' + token + '"}').status_code,
+        self.assertEqual(app.test_client().post(CHANGE_PASSWORD,
+                                                data=PASSWORD_TOKEN + self.__create_timed_token() + '"}').status_code,
                          500)
 
     def test_change_password_token_error(self) -> None:
-        self.assertEqual(app.test_client().post('/api/account/changePassword', data='{"token": "test"}').status_code,
-                         403)
+        self.assertEqual(app.test_client().post(CHANGE_PASSWORD, data='{"token": "test"}').status_code, 403)
 
     def test_change_password_false(self) -> None:
         client = app.test_client()
         self.__set_session_id(client)
-        self.assertEqual(client.post('/api/account/changePassword').status_code, 403)
+        self.assertEqual(client.post(CHANGE_PASSWORD).status_code, 403)
 
-    @mock.patch('requests.post', return_value=MockResponse({"email": "email", "firstName": "firstName", "id": "id",
-                                                            "lastName": "lastName"}, 200))
+    @mock.patch(POST, return_value=MockResponse(ACCOUNT, 200))
     def test_log_in(self, _) -> None:
-        self.assertEqual(app.test_client().post('/api/account/logIn',
-                                                data='{"email": "email", "password": "password"}').status_code,
-                         200)
+        self.assertEqual(app.test_client().post(LOG_IN, data=LOG_IN_DATA).status_code, 200)
 
-    @mock.patch('requests.post', side_effect=__mocked_requests_post_log_in_error)
+    @mock.patch(POST, side_effect=__mocked_requests_post_log_in_error)
     def test_log_in_error(self, _) -> None:
-        self.assertEqual(app.test_client().post('/api/account/logIn',
-                                                data='{"email": "email", "password": "password"}').status_code,
-                         400)
+        self.assertEqual(app.test_client().post(LOG_IN, data=LOG_IN_DATA).status_code, 400)
 
     def test_log_in_false(self) -> None:
         client = app.test_client()
         self.__set_session_id(client)
-        self.assertEqual(client.post('/api/account/logIn').status_code, 403)
+        self.assertEqual(client.post(LOG_IN).status_code, 403)
 
     def test_log_out(self) -> None:
         client = app.test_client()
         self.__set_session_id(client)
-        self.assertEqual(client.post('/api/account/logOut').status_code, 200)
+        self.assertEqual(client.post(LOG_OUT).status_code, 200)
 
     def test_log_out_false(self) -> None:
-        self.assertEqual(app.test_client().post('/api/account/logOut').status_code, 401)
+        self.assertEqual(app.test_client().post(LOG_OUT).status_code, 401)
 
-    @mock.patch('requests.post', return_value=Response())
-    @mock.patch('smtplib.SMTP', return_value=MagicMock())
+    @mock.patch(POST, return_value=Response())
+    @mock.patch(SMTP, return_value=MagicMock())
     def test_recover(self, _, __) -> None:
-        self.assertEqual(app.test_client().post('/api/account/recover', data='{"email": "email"}').status_code, 200)
+        self.assertEqual(app.test_client().post(RECOVER, data=EMAIL_DATA).status_code, 200)
 
-    @mock.patch('requests.post', return_value=Response(status=500))
+    @mock.patch(POST, return_value=Response(status=500))
     def test_recover_error(self, _) -> None:
-        self.assertEqual(app.test_client().post('/api/account/recover', data='{"email": "email"}').status_code, 500)
+        self.assertEqual(app.test_client().post(RECOVER, data=EMAIL_DATA).status_code, 500)
 
     def test_recover_false(self) -> None:
         client = app.test_client()
         self.__set_session_id(client)
-        self.assertEqual(client.post('/api/account/recover').status_code, 403)
+        self.assertEqual(client.post(RECOVER).status_code, 403)
 
-    @mock.patch('requests.post', return_value=MockResponse({"email": "email", "firstName": "firstName", "id": "id",
-                                                            "lastName": "lastName"}, 200))
-    @mock.patch('smtplib.SMTP', return_value=MagicMock())
+    @mock.patch(POST, return_value=MockResponse(ACCOUNT, 200))
+    @mock.patch(SMTP, return_value=MagicMock())
     def test_sign_up(self, _, __) -> None:
-        self.assertEqual(app.test_client().post('/api/account/signUp',
-                                                data='{"email": "email", "password": "password"}').status_code, 200)
+        self.assertEqual(app.test_client().post(SIGN_UP, data=LOG_IN_DATA).status_code, 200)
 
-    @mock.patch('requests.post', side_effect=__mocked_requests_post_log_in_error)
-    @mock.patch('smtplib.SMTP', return_value=MagicMock())
+    @mock.patch(POST, side_effect=__mocked_requests_post_log_in_error)
+    @mock.patch(SMTP, return_value=MagicMock())
     def test_sign_up_log_in_error(self, _, __) -> None:
-        self.assertEqual(app.test_client().post('/api/account/signUp',
-                                                data='{"email": "email", "password": "password"}').status_code, 400)
+        self.assertEqual(app.test_client().post(SIGN_UP, data=LOG_IN_DATA).status_code, 400)
 
-    @mock.patch('requests.post', return_value=Response(status=500))
+    @mock.patch(POST, return_value=Response(status=500))
     def test_sign_up_error(self, _) -> None:
-        self.assertEqual(app.test_client().post('/api/account/signUp', data='{"email": "email"}').status_code, 500)
+        self.assertEqual(app.test_client().post(SIGN_UP, data=EMAIL_DATA).status_code, 500)
 
     def test_sign_up_false(self) -> None:
         client = app.test_client()
         self.__set_session_id(client)
-        self.assertEqual(client.post('/api/account/signUp').status_code, 403)
+        self.assertEqual(client.post(SIGN_UP).status_code, 403)
 
-    @mock.patch('requests.post', return_value=Response(status=200))
+    @mock.patch(POST, return_value=Response(status=200))
     def test_verify(self, _) -> None:
-        token = URLSafeSerializer(app.config['SECRET_KEY']).dumps('test@teacup.com')
-        self.assertEqual(app.test_client().get('/api/account/verify/' + token).data, b'The account have been verified')
+        self.assertEqual(app.test_client().get(VERIFY + self.__create_token()).data, b'The account have been verified')
 
-    @mock.patch('requests.post', return_value=Response(status=500))
+    @mock.patch(POST, return_value=Response(status=500))
     def test_verify_error(self, _) -> None:
-        token = URLSafeSerializer(app.config['SECRET_KEY']).dumps('test@teacup.com')
-        self.assertEqual(app.test_client().get('/api/account/verify/' + token).data,
+        self.assertEqual(app.test_client().get(VERIFY + self.__create_token()).data,
                          b'The account could not be verified, please try again later')
 
     def test_verify_bad_token(self) -> None:
-        self.assertEqual(app.test_client().get('/api/account/verify/token').data, b'The token is not valid')
+        self.assertEqual(app.test_client().get('%stoken' % VERIFY).data, b'The token is not valid')
+
+    @staticmethod
+    def __create_timed_token() -> str:
+        return URLSafeTimedSerializer(app.config[SECRET_KEY]).dumps(TEST_EMAIL)
+
+    @staticmethod
+    def __create_token() -> str:
+        return URLSafeSerializer(app.config[SECRET_KEY]).dumps(TEST_EMAIL)
 
     @staticmethod
     def __set_session_id(client) -> None:
