@@ -3,7 +3,7 @@
 
 [![Build Status](https://travis-ci.com/HenryssonDaniel/teacup-visualization-web-back-python.svg?branch=master)](https://travis-ci.com/HenryssonDaniel/teacup-visualization-web-back-python)
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=HenryssonDaniel_teacup-visualization-web-back-python&metric=coverage)](https://sonarcloud.io/dashboard?id=HenryssonDaniel_teacup-visualization-web-back-python)
-[![latest release](https://img.shields.io/badge/release%20notes-1.0.0-yellow.svg)](https://github.com/HenryssonDaniel/teacup-visualization-web-back-python/blob/master/doc/release-notes/official.md)
+[![latest release](https://img.shields.io/badge/release%20notes-1.0.0-yellow.svg)](https://github.com/HenryssonDaniel/teacup-visualization-web-back-python/blob/master/CHANGES.rst)
 ## What ##
 Visualization web back-end written in Python.
 ## Why ##
