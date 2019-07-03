@@ -11,4 +11,10 @@ Visualization web back-end written in Python.
 This project is needed so that the web front-end can interact with the server side and other Teacup projects.
 ## How ##
 Follow the steps below:
-1. Start the server by running: python api.py
+1. pip install teacup-visualization-back
+1. [The flask command](http://flask.pocoo.org/docs/1.0/tutorial/factory/#run-the-application)
+1. [Configure](http://flask.pocoo.org/docs/1.0/tutorial/deploy/#configure-the-secret-key)
+1. [Run the application](http://flask.pocoo.org/docs/1.0/tutorial/deploy/#run-with-a-production-server)
+
+For developers:
+1. [Run the application](http://flask.pocoo.org/docs/1.0/tutorial/factory/#run-the-application)
