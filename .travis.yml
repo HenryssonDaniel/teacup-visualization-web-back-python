@@ -6,19 +6,16 @@ addons:
 dist: xenial
 language: python
 matrix:
-  allow_failures:
-    - python: "3.8-dev"
-    - python: "nightly"
   include:
     - python: "3.4"
-      env: FULL_RUN=false
+      env: FULL_RUN=true
     - python: "3.5"
       env: FULL_RUN=false
     - python: "3.6"
       env: FULL_RUN=false
     - python: "3.7"
-      env: FULL_RUN=true
-    - python: "3.8-dev"
+      env: FULL_RUN=false
+    - python: "3.8"
       env: FULL_RUN=false
     - python: "nightly"
       env: FULL_RUN=false
